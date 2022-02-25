@@ -24,7 +24,10 @@ def affine_forward(x, w, b):
     # TODO: Implement the affine forward pass. Store the result in out. You     #
     # will need to reshape the input into rows.                                 #
     #############################################################################
-    pass
+    x_shape = x.shape
+    x = x.reshape((x.shape[0],-1))
+    out = np.dot(x,w) + b 
+    x = x.reshape(x_shape)
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -52,7 +55,16 @@ def affine_backward(dout, cache):
     #############################################################################
     # TODO: Implement the affine backward pass.                                 #
     #############################################################################
-    pass
+    x_shape_original = x.shape
+
+    x_reshape = x.reshape((x_shape_original[0], -1))
+    
+    dx = dout @ w.T
+    dx = dx.reshape(x_shape_original)
+
+    dw = x_reshape.T @ dout
+
+    db = np.sum(dout, axis=0)
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -74,7 +86,8 @@ def relu_forward(x):
     #############################################################################
     # TODO: Implement the ReLU forward pass.                                    #
     #############################################################################
-    pass
+    out = np.where(x<0, 0, x)
+    
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -97,7 +110,17 @@ def relu_backward(dout, cache):
     #############################################################################
     # TODO: Implement the ReLU backward pass.                                   #
     #############################################################################
-    pass
+    #dx = x > 0 
+    #print(x)
+    #dx = dout*(x < 0)
+    #dx_1 = np.where(dout<0, 0, dout)
+    #print(dx_1)
+    #dx = np.where(dx_1>0, 1, dx_1)
+    #print(dx)
+    
+    dx = np.array(dout, copy=True)
+    dx[x <= 0] = 0
+    
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -282,7 +305,9 @@ def dropout_forward(x, dropout_param):
         # TODO: Implement the training phase forward pass for inverted dropout.   #
         # Store the dropout mask in the mask variable.                            #
         ###########################################################################
-        pass
+        mask = dropout_param.get('seed')/p
+        out = x*mask
+        out = out.reshape(x.shape)
         ###########################################################################
         #                            END OF YOUR CODE                             #
         ###########################################################################
@@ -311,7 +336,7 @@ def dropout_backward(dout, cache):
         ###########################################################################
         # TODO: Implement the training phase backward pass for inverted dropout.  #
         ###########################################################################
-        pass
+        dx = dout*mask
         ###########################################################################
         #                            END OF YOUR CODE                             #
         ###########################################################################
