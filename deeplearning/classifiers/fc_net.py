@@ -133,6 +133,11 @@ class TwoLayerNet(object):
         return loss, grads
 
 
+import numpy as np
+
+from deeplearning.layers import *
+from deeplearning.layer_utils import *
+
 class FullyConnectedNet(object):
     """
     A fully-connected neural network with an arbitrary number of hidden layers,
@@ -191,7 +196,18 @@ class FullyConnectedNet(object):
         # beta2, etc. Scale parameters should be initialized to one and shift      #
         # parameters should be initialized to zero.                                #
         ############################################################################
-        pass
+        layer_sizes = [input_dim] + hidden_dims + [num_classes]
+        
+        for i in range(self.num_layers):
+            W_i = 'W' + str(i+1)
+            b_i = 'b' + str(i+1)
+            
+            self.params[W_i] = np.random.normal(scale=weight_scale, \
+                                            size=(layer_sizes[i], layer_sizes[i+1]))
+            
+            self.params[b_i] = np.zeros(layer_sizes[i+1])
+            
+            
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -248,7 +264,22 @@ class FullyConnectedNet(object):
         # self.bn_params[1] to the forward pass for the second batch normalization #
         # layer, etc.                                                              #
         ############################################################################
-        pass
+        a = X
+        cache_lst = [None]
+        
+        for i in range(self.num_layers):
+            w_i = self.params['W' + str(i+1)]
+            b_i = self.params['b' + str(i+1)]
+            
+            if i == self.num_layers - 1:
+                a, cache = affine_forward(a, w_i, b_i)
+            else:
+                a, cache = affine_relu_forward(a, w_i, b_i)
+                
+            cache_lst.append(cache)
+                
+        scores = a
+            
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -272,7 +303,25 @@ class FullyConnectedNet(object):
         # automated tests, make sure that your L2 regularization includes a factor #
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
-        pass
+        
+        loss, dx = softmax_loss(scores,y)
+        
+        for i in range(self.num_layers, 0, -1):
+            w_i = self.params['W' + str(i)]
+            loss += np.sum(w_i**2)*self.reg*0.5
+            cache_i = cache_lst[i]
+            
+            #not sure if dx is the right for both affine backward functions
+            if i == self.num_layers:
+                dx, dw, db = affine_backward(dx, cache_i)
+            else: 
+                dx, dw, db = affine_relu_backward(dx, cache_i)
+            
+            grads['W' + str(i)] =dw + self.reg*w_i
+            grads['b' + str(i)] =db 
+        
+        
+        
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
