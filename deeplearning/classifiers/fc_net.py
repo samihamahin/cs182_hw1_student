@@ -196,16 +196,25 @@ class FullyConnectedNet(object):
         # beta2, etc. Scale parameters should be initialized to one and shift      #
         # parameters should be initialized to zero.                                #
         ############################################################################
+        
         layer_sizes = [input_dim] + hidden_dims + [num_classes]
         
         for i in range(self.num_layers):
             W_i = 'W' + str(i+1)
             b_i = 'b' + str(i+1)
             
+            if use_batchnorm and i != (self.num_layers-1):
+                gamma_i = 'gamma' + str(i+1)
+                beta_i = 'beta'+ str(i+1)
+                
+                self.params[gamma_i] = np.ones(layer_sizes[i+1])
+                self.params[beta_i] = np.zeros(layer_sizes[i+1])
+            
             self.params[W_i] = np.random.normal(scale=weight_scale, \
                                             size=(layer_sizes[i], layer_sizes[i+1]))
             
             self.params[b_i] = np.zeros(layer_sizes[i+1])
+            
             
             
         ############################################################################
@@ -273,8 +282,16 @@ class FullyConnectedNet(object):
             
             if i == self.num_layers - 1:
                 a, cache = affine_forward(a, w_i, b_i)
+            
+            elif self.use_batchnorm:
+                gamma_i = self.params['gamma' + str(i+1)]
+                beta_i = self.params['beta'+ str(i+1)]
+                
+                #print(w_i.shape, b_i.shape, gamma_i.shape, beta_i.shape)
+                a, cache = affine_relu_bn_forward(a, w_i, b_i, gamma_i, beta_i,self.bn_params[i])           
             else:
                 a, cache = affine_relu_forward(a, w_i, b_i)
+            
                 
             cache_lst.append(cache)
                 
@@ -311,14 +328,20 @@ class FullyConnectedNet(object):
             loss += np.sum(w_i**2)*self.reg*0.5
             cache_i = cache_lst[i]
             
-            #not sure if dx is the right for both affine backward functions
             if i == self.num_layers:
                 dx, dw, db = affine_backward(dx, cache_i)
+            elif self.use_batchnorm:
+                # !!! might come across problem with using cache_i
+                #print(len(cache_i))
+                #print(affine_relu_bn_backward(dx, cache_i))
+                dx, dw, db, dgamma, dbeta = affine_relu_bn_backward(dx, cache_i)
+                grads['gamma' + str(i)] = dgamma
+                grads['beta' + str(i)] = dbeta
             else: 
                 dx, dw, db = affine_relu_backward(dx, cache_i)
             
             grads['W' + str(i)] =dw + self.reg*w_i
-            grads['b' + str(i)] =db 
+            grads['b' + str(i)] =db
         
         
         
