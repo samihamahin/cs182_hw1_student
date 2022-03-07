@@ -209,12 +209,13 @@ class FullyConnectedNet(object):
                 
                 self.params[gamma_i] = np.ones(layer_sizes[i+1])
                 self.params[beta_i] = np.zeros(layer_sizes[i+1])
+                
+                
             
             self.params[W_i] = np.random.normal(scale=weight_scale, \
                                             size=(layer_sizes[i], layer_sizes[i+1]))
             
             self.params[b_i] = np.zeros(layer_sizes[i+1])
-            
             
             
         ############################################################################
@@ -282,17 +283,20 @@ class FullyConnectedNet(object):
             
             if i == self.num_layers - 1:
                 a, cache = affine_forward(a, w_i, b_i)
-            
+            #elif self.use_batchnorm and self.use_dropout: 
             elif self.use_batchnorm:
                 gamma_i = self.params['gamma' + str(i+1)]
                 beta_i = self.params['beta'+ str(i+1)]
-                
-                #print(w_i.shape, b_i.shape, gamma_i.shape, beta_i.shape)
-                a, cache = affine_relu_bn_forward(a, w_i, b_i, gamma_i, beta_i,self.bn_params[i])           
+                if self.use_dropout:
+                    a, cache = affine_relu_bn_do_forward(a, w_i, b_i, gamma_i, beta_i,self.bn_params[i], self.dropout_param)
+                else: 
+                    a, cache = affine_relu_bn_forward(a, w_i, b_i, gamma_i, beta_i,self.bn_params[i])
             else:
-                a, cache = affine_relu_forward(a, w_i, b_i)
+                if self.use_dropout:
+                    a, cache = affine_relu_do_forward(a, w_i, b_i, self.dropout_param)
+                else:
+                    a, cache = affine_relu_forward(a, w_i, b_i)
             
-                
             cache_lst.append(cache)
                 
         scores = a
@@ -329,16 +333,26 @@ class FullyConnectedNet(object):
             cache_i = cache_lst[i]
             
             if i == self.num_layers:
+                #print('if', dx.shape)
                 dx, dw, db = affine_backward(dx, cache_i)
             elif self.use_batchnorm:
                 # !!! might come across problem with using cache_i
                 #print(len(cache_i))
                 #print(affine_relu_bn_backward(dx, cache_i))
-                dx, dw, db, dgamma, dbeta = affine_relu_bn_backward(dx, cache_i)
+                #print('bn' , i, dx.shape)
+                if self.use_dropout:
+                    dx, dw, db, dgamma, dbeta = affine_relu_bn_do_backward(dx, cache_i)
+                else:    
+                    dx, dw, db, dgamma, dbeta = affine_relu_bn_backward(dx, cache_i)
                 grads['gamma' + str(i)] = dgamma
                 grads['beta' + str(i)] = dbeta
+                
             else: 
-                dx, dw, db = affine_relu_backward(dx, cache_i)
+                #print('else', dx.shape)
+                if self.use_dropout:
+                    dx, dw, db= affine_relu_do_backward(dx, cache_i)
+                else: 
+                    dx, dw, db = affine_relu_backward(dx, cache_i)
             
             grads['W' + str(i)] =dw + self.reg*w_i
             grads['b' + str(i)] =db
